@@ -2,7 +2,6 @@ package emssdb
 
 import (
 	"encoding/binary"
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
