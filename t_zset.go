@@ -126,13 +126,11 @@ func (this *DB) Zsize(name Bytes) (ret int64, err error) {
 
 func (this *DB) Zscan(name Bytes, start, end int64) (ret *ZIterator) {
 	key_start, key_end := encodeZscoreKey(name, nil, start), encodeZscoreKey(name, nil, end)
-	fmt.Println(">>>", key_start, key_end)
 	return NewZIterator(this.Iterator(key_start, key_end))
 }
 
 func (this *DB) Zrscan(name Bytes, start, end int64) (ret *ZIterator) {
 	key_start, key_end := encodeZscoreKey(name, nil, start), encodeZscoreKey(name, nil, end)
-	fmt.Println(">>>", key_start, key_end)
 	return NewZIterator(this.RevIterator(key_start, key_end))
 }
 

@@ -48,10 +48,8 @@ func (this *DB) Eset(key, val Bytes, etime uint64) (err error) {
 	ekey := encodeExkvKey(key)
 	eval := encodeExkvValue(val, etime)
 	writer.Put(ekey, eval)
-	fmt.Println("eset kv", ekey, eval)
 	xkey := encodeExstampKey(key, etime)
 	writer.Put(xkey, nil)
-	fmt.Println("eset stamp", xkey, nil)
 	return writer.Commit()
 }
 
@@ -110,17 +108,13 @@ func (this *DB) Elist(start uint64, end uint64) (ret *XIterator) {
 func (this *DB) expireDaemon() {
 	this.waitgroup.Add(1)
 
-	fmt.Println("expireDaemon", this.end)
 	for !this.end {
-		fmt.Println("do expire")
 		now := time.Now().Unix()
 		xit := this.Elist(0, uint64(now))
 		for xit.Next() {
-			fmt.Println("expire key", xit.Key())
 			this.Edel(xit.Key())
 		}
 		time.Sleep(this.expireDelay)
 	}
-	fmt.Println("expireDaemon end")
 	this.waitgroup.Done()
 }
