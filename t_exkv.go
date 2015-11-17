@@ -2,6 +2,7 @@ package emssdb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 )
 
@@ -25,10 +26,11 @@ func decodeExkvValue(slice Bytes) (ret Bytes, stamp uint64) {
 }
 
 func encodeExstampKey(key Bytes, stamp uint64) (ret Bytes) {
-	bst := make([]byte, 9+len(key))
-	bst[0] = DTEXSTAMP
-	encodeExkvValue(key, stamp)
-	return bst
+	rb := make([]byte, 9+len(key))
+	rb[0] = DTEXSTAMP
+	binary.BigEndian.PutUint64(rb[1:9], stamp)
+	copy(rb[9:], key)
+	return rb
 }
 
 func decodeExstampKey(slice Bytes) (ret Bytes, stamp uint64) {
@@ -46,8 +48,10 @@ func (this *DB) Eset(key, val Bytes, etime uint64) (err error) {
 	ekey := encodeExkvKey(key)
 	eval := encodeExkvValue(val, etime)
 	writer.Put(ekey, eval)
+	fmt.Println("eset kv", ekey, eval)
 	xkey := encodeExstampKey(key, etime)
 	writer.Put(xkey, nil)
+	fmt.Println("eset stamp", xkey, nil)
 	return writer.Commit()
 }
 
@@ -57,30 +61,12 @@ func (this *DB) Edel(key Bytes) (err error) {
 	defer writer.Done()
 	// readoption
 	_, etime, _ := this.Eget(key)
-	ekey := encodeKvKey(key)
+	ekey := encodeExkvKey(key)
 	writer.Delete(ekey)
 	xkey := encodeExstampKey(key, etime)
 	writer.Delete(xkey)
 	return writer.Commit()
 }
-
-//func (this *DB) Eincr(key Bytes, by int64) (newval int64, err error) {
-//	writer := this.writer
-//	writer.Do()
-//	defer writer.Done()
-//	// readoption
-//	rkey := encodeKvKey(key)
-//	var ival int64
-//	if oldvar, oerr := this.db.Get(rkey, nil); oerr == leveldb.ErrNotFound {
-//		ival = by
-//	} else if err == nil {
-//		ival = Bytes(oldvar).GetInt64() + by
-//	} else {
-//		return 0, err
-//	}
-//	writer.Put(rkey, NewByInt64(ival))
-//	return ival, writer.Commit()
-//}
 
 func (this *DB) EsetDelay(delay time.Duration) {
 	this.expireDelay = delay
@@ -88,8 +74,11 @@ func (this *DB) EsetDelay(delay time.Duration) {
 
 func (this *DB) Eget(key Bytes) (ret Bytes, stamp uint64, err error) {
 	// readoption
-	rkey := encodeKvKey(key)
+	rkey := encodeExkvKey(key)
 	slice, _ := this.db.Get(rkey, nil)
+	if len(slice) < 8 {
+		return nil, 0, nil
+	}
 	v, s := decodeExkvValue(slice)
 	return v, s, nil
 }
@@ -120,13 +109,18 @@ func (this *DB) Elist(start uint64, end uint64) (ret *XIterator) {
 
 func (this *DB) expireDaemon() {
 	this.waitgroup.Add(1)
-	for !this.close {
+
+	fmt.Println("expireDaemon", this.end)
+	for !this.end {
+		fmt.Println("do expire")
 		now := time.Now().Unix()
 		xit := this.Elist(0, uint64(now))
 		for xit.Next() {
+			fmt.Println("expire key", xit.Key())
 			this.Edel(xit.Key())
 		}
 		time.Sleep(this.expireDelay)
 	}
+	fmt.Println("expireDaemon end")
 	this.waitgroup.Done()
 }

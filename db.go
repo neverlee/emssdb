@@ -15,7 +15,7 @@ type DB struct {
 	options     opt.Options
 	writer      *Writer
 	expireDelay time.Duration
-	close       bool
+	end         bool
 	waitgroup   sync.WaitGroup
 }
 
@@ -68,7 +68,7 @@ func OpenDB(options Options) (that *DB, err error) {
 }
 
 func (this *DB) Close() {
-	this.close = true
+	this.end = true
 	this.waitgroup.Wait()
 	this.db.Close()
 }
