@@ -2,7 +2,7 @@ package emssdb
 
 import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"runtime"
+	//"runtime"
 )
 
 const (
@@ -26,11 +26,15 @@ type Iterator struct {
 
 func NewIterator(it iterator.Iterator, direction int) (that *Iterator) {
 	this := Iterator{it, direction, nil, nil}
-	runtime.SetFinalizer(&this,
-		func(this *Iterator) {
-			this.it.Release()
-		})
+	//runtime.SetFinalizer(&this,
+	//	func(this *Iterator) {
+	//		this.it.Release()
+	//	})
 	return &this
+}
+
+func (this *Iterator) Close() {
+	this.it.Release()
 }
 
 func (this *Iterator) Key() (ret Bytes) {
@@ -90,6 +94,66 @@ func (this *KIterator) Next() (ret bool) {
 	} else {
 		this.key = nil
 		this.value = nil
+	}
+	return b
+}
+
+type EIterator struct {
+	*Iterator
+	etime uint64
+}
+
+func NewEIterator(it *Iterator) (ret *EIterator) {
+	var this EIterator
+	this.Iterator = it
+	return &this
+}
+
+func (this *EIterator) Etime() (ret uint64) {
+	return this.etime
+}
+
+func (this *EIterator) Next() (ret bool) {
+	b := this.next()
+	if b {
+		this.key = NewByClone(this.it.Key()[1:])
+		v, e := decodeExkvValue(this.it.Value())
+		this.value = NewByClone(v)
+		this.etime = e
+	} else {
+		this.key = nil
+		this.value = nil
+		this.etime = 0
+	}
+	return b
+}
+
+type XIterator struct {
+	*Iterator
+	etime uint64
+}
+
+func NewXIterator(it *Iterator) (ret *XIterator) {
+	var this XIterator
+	this.Iterator = it
+	return &this
+}
+
+func (this *XIterator) Etime() (ret uint64) {
+	return this.etime
+}
+
+func (this *XIterator) Next() (ret bool) {
+	b := this.next()
+	if b {
+		k, e := decodeExstampKey(this.it.Key())
+		this.key = NewByClone(k)
+		this.value = nil
+		this.etime = e
+	} else {
+		this.key = nil
+		this.value = nil
+		this.etime = 0
 	}
 	return b
 }

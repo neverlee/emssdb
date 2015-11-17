@@ -10,6 +10,8 @@ const (
 	SSDB_KEY_LEN_MAX = 255
 	SYNCLOG          = 1
 	DTKV             = 'k'
+	DTEXKV           = 'x'
+	DTEXSTAMP        = 'e'
 	DTHASH           = 'h' // hashmap(sorted by key)
 	DTHSIZE          = 'H'
 	DTZSET           = 's' // key => score
@@ -110,5 +112,3 @@ func isVaildHashKey(name, key Bytes) (err error) {
 	}
 	return nil
 }
-
-

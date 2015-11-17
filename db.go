@@ -5,16 +5,21 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"runtime"
+	//"runtime"
+	"sync"
+	"time"
 )
 
 type DB struct {
-	db      *leveldb.DB
-	options opt.Options
-	writer  *Writer
+	db          *leveldb.DB
+	options     opt.Options
+	writer      *Writer
+	expireDelay time.Duration
+	close       bool
+	waitgroup   sync.WaitGroup
 }
 
-func NewDB() *DB {
+func newDB() *DB {
 	var db DB
 	return &db
 }
@@ -25,6 +30,9 @@ func OpenDB(options Options) (that *DB, err error) {
 	write_buffer_size := 4
 	block_size := 4
 	compression := options.Compression
+	if options.ExpireDelay <= time.Second {
+		options.ExpireDelay = time.Second
+	}
 
 	if cache_size <= 0 {
 		cache_size = 8
@@ -32,12 +40,13 @@ func OpenDB(options Options) (that *DB, err error) {
 
 	//log::path,cache_size,block_size,write_buffer,compression
 
-	this := NewDB()
+	this := newDB()
 	this.options.ErrorIfMissing = false
 	this.options.Filter = filter.NewBloomFilter(10)
 	//this.Options.BlockCacher = leveldb::NewLRUCache(cache_size * 1048576)
 	this.options.BlockSize = block_size * 1024
 	this.options.WriteBuffer = write_buffer_size * 1024 * 1024
+	this.expireDelay = options.ExpireDelay
 	if compression {
 		this.options.Compression = opt.SnappyCompression
 	} else {
@@ -45,16 +54,23 @@ func OpenDB(options Options) (that *DB, err error) {
 	}
 
 	if tdb, err := leveldb.OpenFile(main_db_path, &this.options); err == nil {
-		runtime.SetFinalizer(this,
-			func(this *DB) {
-				this.db.Close()
-			})
+		//runtime.SetFinalizer(this,
+		//	func(this *DB) {
+		//		this.db.Close()
+		//	})
 		this.db = tdb
 		this.writer = NewWriter(this.db)
+		go this.expireDaemon()
 		return this, nil
 	} else {
 		return nil, err
 	}
+}
+
+func (this *DB) Close() {
+	this.close = true
+	this.waitgroup.Wait()
+	this.db.Close()
 }
 
 //	// return (start, end], not include start
