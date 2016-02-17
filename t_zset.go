@@ -56,7 +56,7 @@ func decodeZscoreKey(slice Bytes) (name Bytes, key Bytes, score int64) {
 	gname := p[:slice[1]]
 	p = p[len(gname)+1:]
 	gscore := deInt(Bytes(p[:8]).GetUInt64())
-	gkey := p[9:]
+	gkey := p[8:]
 	return gname, gkey, gscore
 }
 
