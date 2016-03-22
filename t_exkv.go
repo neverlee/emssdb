@@ -36,11 +36,11 @@ func decodeExstampKey(slice Bytes) (ret Bytes, stamp uint64) {
 	return decodeExkvValue(slice[1:])
 }
 
-func (this *DB) Eset(key, val Bytes, etime uint64) (err error) {
+func (db *DB) Eset(key, val Bytes, etime uint64) (err error) {
 	if len(key) == 0 {
 		return ErrEmptyKey
 	}
-	writer := this.writer
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
@@ -52,12 +52,12 @@ func (this *DB) Eset(key, val Bytes, etime uint64) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) Edel(key Bytes) (err error) {
-	writer := this.writer
+func (db *DB) Edel(key Bytes) (err error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
-	_, etime, _ := this.Eget(key)
+	_, etime, _ := db.Eget(key)
 	ekey := encodeExkvKey(key)
 	writer.Delete(ekey)
 	xkey := encodeExstampKey(key, etime)
@@ -65,14 +65,14 @@ func (this *DB) Edel(key Bytes) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) EsetDelay(delay time.Duration) {
-	this.expireDelay = delay
+func (db *DB) EsetDelay(delay time.Duration) {
+	db.expireDelay = delay
 }
 
-func (this *DB) Eget(key Bytes) (ret Bytes, stamp uint64, err error) {
+func (db *DB) Eget(key Bytes) (ret Bytes, stamp uint64, err error) {
 	// readoption
 	rkey := encodeExkvKey(key)
-	slice, _ := this.db.Get(rkey, nil)
+	slice, _ := db.db.Get(rkey, nil)
 	if len(slice) < 8 {
 		return nil, 0, nil
 	}
@@ -80,40 +80,40 @@ func (this *DB) Eget(key Bytes) (ret Bytes, stamp uint64, err error) {
 	return v, s, nil
 }
 
-func (this *DB) Escan(start Bytes, end Bytes) (ret *EIterator) {
+func (db *DB) Escan(start Bytes, end Bytes) (ret *EIterator) {
 	key_start, key_end := encodeExkvKey(start), encodeExkvKey(end)
 	if len(end) == 0 {
 		key_end = encodeOneKey(DTEXKV+1, end)
 	}
-	return NewEIterator(this.Iterator(key_start, key_end))
+	return NewEIterator(db.Iterator(key_start, key_end))
 }
 
-func (this *DB) Erscan(start Bytes, end Bytes) (ret *EIterator) {
+func (db *DB) Erscan(start Bytes, end Bytes) (ret *EIterator) {
 	key_start, key_end := encodeExkvKey(start), encodeExkvKey(end)
 	if len(end) == 0 {
 		key_end = encodeOneKey(DTEXKV+1, end)
 	}
-	return NewEIterator(this.RevIterator(key_start, key_end))
+	return NewEIterator(db.RevIterator(key_start, key_end))
 }
 
-func (this *DB) Elist(start uint64, end uint64) (ret *XIterator) {
+func (db *DB) Elist(start uint64, end uint64) (ret *XIterator) {
 	if end < start {
 		end = start + 1
 	}
 	key_start, key_end := encodeExstampKey(nil, start), encodeExstampKey(nil, end)
-	return NewXIterator(this.Iterator(key_start, key_end))
+	return NewXIterator(db.Iterator(key_start, key_end))
 }
 
-func (this *DB) expireDaemon() {
-	this.waitgroup.Add(1)
+func (db *DB) expireDaemon() {
+	db.waitgroup.Add(1)
 
-	for !this.end {
+	for !db.end {
 		now := time.Now().Unix()
-		xit := this.Elist(0, uint64(now))
+		xit := db.Elist(0, uint64(now))
 		for xit.Next() {
-			this.Edel(xit.Key())
+			db.Edel(xit.Key())
 		}
-		time.Sleep(this.expireDelay)
+		time.Sleep(db.expireDelay)
 	}
-	this.waitgroup.Done()
+	db.waitgroup.Done()
 }

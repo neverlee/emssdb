@@ -38,16 +38,16 @@ func decodeQitemKey(slice Bytes) (name Bytes, seq int64) {
 	return gname, gseq
 }
 
-func (this *DB) Qget(name Bytes, seq int64) (ret Bytes, err error) {
+func (db *DB) Qget(name Bytes, seq int64) (ret Bytes, err error) {
 	// readoption
 	rkey := encodeQitemKey(name, seq)
-	return this.db.Get(rkey, nil)
+	return db.db.Get(rkey, nil)
 }
 
-func (this *DB) qgetint64(name Bytes, seq int64) (ret int64, err error) {
+func (db *DB) qgetint64(name Bytes, seq int64) (ret int64, err error) {
 	// readoption
 	rkey := encodeQitemKey(name, seq)
-	if val, err := this.db.Get(rkey, nil); err == nil {
+	if val, err := db.db.Get(rkey, nil); err == nil {
 		if len(val) != 8 {
 			return 0, ErrNotIntVal
 		} else {
@@ -59,26 +59,26 @@ func (this *DB) qgetint64(name Bytes, seq int64) (ret int64, err error) {
 	}
 }
 
-func (this *DB) qdelOne(name Bytes, seq int64) (err error) {
+func (db *DB) qdelOne(name Bytes, seq int64) (err error) {
 	rkey := encodeQitemKey(name, seq)
-	this.writer.Delete(rkey)
+	db.writer.Delete(rkey)
 	return nil
 }
 
-func (this *DB) qsetOne(name Bytes, seq int64, item Bytes) (err error) {
+func (db *DB) qsetOne(name Bytes, seq int64, item Bytes) (err error) {
 	rkey := encodeQitemKey(name, seq)
-	this.writer.Put(rkey, item)
+	db.writer.Put(rkey, item)
 	return nil
 }
 
-func (this *DB) qsetInt(name Bytes, seq int64, item int64) (err error) {
+func (db *DB) qsetInt(name Bytes, seq int64, item int64) (err error) {
 	rkey := encodeQitemKey(name, seq)
-	this.writer.Put(rkey, NewByInt64(item))
+	db.writer.Put(rkey, NewByInt64(item))
 	return nil
 }
 
-func (this *DB) qsetSize(name Bytes, isize int64) (err error) {
-	writer := this.writer
+func (db *DB) qsetSize(name Bytes, isize int64) (err error) {
+	writer := db.writer
 	skey := encodeQsizeKey(name)
 	if isize == 0 {
 		writer.Delete(skey)
@@ -89,129 +89,129 @@ func (this *DB) qsetSize(name Bytes, isize int64) (err error) {
 	return nil
 }
 
-func (this *DB) Qsize(name Bytes) (ret int64, err error) {
+func (db *DB) Qsize(name Bytes) (ret int64, err error) {
 	skey := encodeQsizeKey(name)
 	// readoption
 	isize := int64(0)
-	ssize, err := this.db.Get(skey, nil)
+	ssize, err := db.db.Get(skey, nil)
 	if err == nil {
 		isize = Bytes(ssize).GetInt64()
 	}
 	return isize, err
 }
 
-func (this *DB) Qfront(name Bytes) (ret Bytes, err error) {
-	if seq, serr := this.qgetint64(name, qFRONT_SEQ); serr == nil {
-		return this.Qget(name, seq)
+func (db *DB) Qfront(name Bytes) (ret Bytes, err error) {
+	if seq, serr := db.qgetint64(name, qFRONT_SEQ); serr == nil {
+		return db.Qget(name, seq)
 	} else {
 		return nil, serr
 	}
 }
 
-func (this *DB) Qback(name Bytes) (ret Bytes, err error) {
-	if seq, serr := this.qgetint64(name, qBACK_SEQ); serr == nil {
-		return this.Qget(name, seq)
+func (db *DB) Qback(name Bytes) (ret Bytes, err error) {
+	if seq, serr := db.qgetint64(name, qBACK_SEQ); serr == nil {
+		return db.Qget(name, seq)
 	} else {
 		return nil, serr
 	}
 }
 
-func (this *DB) _qpush(name, item Bytes, fbseq int64) (ret error) {
-	writer := this.writer
+func (db *DB) _qpush(name, item Bytes, fbseq int64) (ret error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 
-	isize, ierr := this.Qsize(name)
+	isize, ierr := db.Qsize(name)
 	if ierr != nil && ierr != leveldb.ErrNotFound {
 		return ierr
 	}
 	if isize >= qBITMOD { //  isize+1 >= qMAX_SIZE {
 		return ErrOutOfRange
 	}
-	seq, serr := this.qgetint64(name, fbseq)
+	seq, serr := db.qgetint64(name, fbseq)
 	// update front and/or back
 	if serr == leveldb.ErrNotFound {
 		seq = qITEM_SEQ_INIT
-		this.qsetInt(name, qFRONT_SEQ, seq)
-		this.qsetInt(name, qBACK_SEQ, seq)
+		db.qsetInt(name, qFRONT_SEQ, seq)
+		db.qsetInt(name, qBACK_SEQ, seq)
 	} else if serr == nil {
 		if fbseq == qFRONT_SEQ {
 			seq = (seq + 1) & qBITMOD
 		} else {
 			seq = (seq - 1) & qBITMOD
 		}
-		this.qsetInt(name, fbseq, seq)
+		db.qsetInt(name, fbseq, seq)
 	} else {
 		return serr
 	}
 
 	// insert item
-	this.qsetOne(name, seq, item)
+	db.qsetOne(name, seq, item)
 	// change queue size
-	this.qsetSize(name, isize+1)
+	db.qsetSize(name, isize+1)
 	return writer.Commit()
 }
 
-func (this *DB) QpushFront(name, item Bytes) (ret error) {
-	return this._qpush(name, item, qFRONT_SEQ)
+func (db *DB) QpushFront(name, item Bytes) (ret error) {
+	return db._qpush(name, item, qFRONT_SEQ)
 }
 
-func (this *DB) QpushBack(name, item Bytes) (ret error) {
-	return this._qpush(name, item, qBACK_SEQ)
+func (db *DB) QpushBack(name, item Bytes) (ret error) {
+	return db._qpush(name, item, qBACK_SEQ)
 }
 
-func (this *DB) _qpop(name Bytes, fbseq int64) (item Bytes, ret error) {
-	writer := this.writer
+func (db *DB) _qpop(name Bytes, fbseq int64) (item Bytes, ret error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 
-	isize, ierr := this.Qsize(name)
+	isize, ierr := db.Qsize(name)
 	if ierr != nil && ierr != leveldb.ErrNotFound {
 		return nil, ierr
 	}
 	//if isize < 1 { return ErrOutOfRange }
-	seq, serr := this.qgetint64(name, fbseq)
+	seq, serr := db.qgetint64(name, fbseq)
 	if serr != nil {
 		return nil, serr
 	}
 
-	gitem, gerr := this.Qget(name, seq)
+	gitem, gerr := db.Qget(name, seq)
 	if gerr != nil {
 		return gitem, gerr
 	}
 
-	this.qdelOne(name, seq)
+	db.qdelOne(name, seq)
 	isize -= 1
 	if isize <= 0 {
-		this.qdelOne(name, qFRONT_SEQ)
-		this.qdelOne(name, qBACK_SEQ)
+		db.qdelOne(name, qFRONT_SEQ)
+		db.qdelOne(name, qBACK_SEQ)
 	} else {
 		if fbseq == qFRONT_SEQ {
 			seq = (seq - 1) & qBITMOD
 		} else {
 			seq = (seq + 1) & qBITMOD
 		}
-		this.qsetInt(name, fbseq, seq)
+		db.qsetInt(name, fbseq, seq)
 	}
-	this.qsetSize(name, isize)
+	db.qsetSize(name, isize)
 
 	return gitem, writer.Commit()
 }
 
-func (this *DB) QpopFront(name Bytes) (item Bytes, ret error) {
-	return this._qpop(name, qFRONT_SEQ)
+func (db *DB) QpopFront(name Bytes) (item Bytes, ret error) {
+	return db._qpop(name, qFRONT_SEQ)
 }
 
-func (this *DB) QpopBack(name Bytes) (item Bytes, ret error) {
-	return this._qpop(name, qBACK_SEQ)
+func (db *DB) QpopBack(name Bytes) (item Bytes, ret error) {
+	return db._qpop(name, qBACK_SEQ)
 }
 
-func (this *DB) Qlist(sname, ename Bytes) (ret []Bytes) {
+func (db *DB) Qlist(sname, ename Bytes) (ret []Bytes) {
 	start, end := encodeQsizeKey(sname), encodeQsizeKey(ename)
 	if len(ename) == 0 {
 		end = encodeOneKey(DTQSIZE+1, nil)
 	}
-	it := this.Iterator(start, end)
+	it := db.Iterator(start, end)
 	list := make([]Bytes, 0)
 	for it.Next() {
 		ks := it.Key()
@@ -229,8 +229,8 @@ func encodeQitemiteraKey(name Bytes, fill byte) (ret Bytes) {
 	return buf
 }
 
-func (this *DB) Qscan(name Bytes) (ret *QIterator) {
+func (db *DB) Qscan(name Bytes) (ret *QIterator) {
 	//key_start, key_end := encodeQitemiteraKey(name, 0), encodeQitemiteraKey(name, 1)
 	key_start, key_end := encodeQitemKey(name, 0), encodeQitemKey(name, 0x7FFFFFFFffffffff)
-	return NewQIterator(this.Iterator(key_start, key_end))
+	return NewQIterator(db.Iterator(key_start, key_end))
 }

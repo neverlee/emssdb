@@ -12,8 +12,8 @@ func decodeKvKey(slice Bytes) (ret Bytes) {
 	return decodeOneKey(slice)
 }
 
-func (this *DB) MultiSet(keys []Bytes, vals []Bytes) (err error) {
-	writer := this.writer
+func (db *DB) MultiSet(keys []Bytes, vals []Bytes) (err error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
@@ -24,8 +24,8 @@ func (this *DB) MultiSet(keys []Bytes, vals []Bytes) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) MultiDelete(keys []Bytes) (err error) {
-	writer := this.writer
+func (db *DB) MultiDelete(keys []Bytes) (err error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
@@ -36,11 +36,11 @@ func (this *DB) MultiDelete(keys []Bytes) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) Set(key Bytes, val Bytes) (err error) {
+func (db *DB) Set(key Bytes, val Bytes) (err error) {
 	if len(key) == 0 {
 		return ErrEmptyKey
 	}
-	writer := this.writer
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
@@ -49,8 +49,8 @@ func (this *DB) Set(key Bytes, val Bytes) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) Del(key Bytes) (err error) {
-	writer := this.writer
+func (db *DB) Del(key Bytes) (err error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
@@ -59,14 +59,14 @@ func (this *DB) Del(key Bytes) (err error) {
 	return writer.Commit()
 }
 
-func (this *DB) Incr(key Bytes, by int64) (newval int64, err error) {
-	writer := this.writer
+func (db *DB) Incr(key Bytes, by int64) (newval int64, err error) {
+	writer := db.writer
 	writer.Do()
 	defer writer.Done()
 	// readoption
 	rkey := encodeKvKey(key)
 	var ival int64
-	if oldvar, oerr := this.db.Get(rkey, nil); oerr == leveldb.ErrNotFound {
+	if oldvar, oerr := db.db.Get(rkey, nil); oerr == leveldb.ErrNotFound {
 		ival = by
 	} else if err == nil {
 		ival = Bytes(oldvar).GetInt64() + by
@@ -77,24 +77,24 @@ func (this *DB) Incr(key Bytes, by int64) (newval int64, err error) {
 	return ival, writer.Commit()
 }
 
-func (this *DB) Get(key Bytes) (ret Bytes, err error) {
+func (db *DB) Get(key Bytes) (ret Bytes, err error) {
 	// readoption
 	rkey := encodeKvKey(key)
-	return this.db.Get(rkey, nil)
+	return db.db.Get(rkey, nil)
 }
 
-func (this *DB) Scan(start Bytes, end Bytes) (ret *KIterator) {
+func (db *DB) Scan(start Bytes, end Bytes) (ret *KIterator) {
 	key_start, key_end := encodeKvKey(start), encodeKvKey(end)
 	if len(end) == 0 {
 		key_end = encodeOneKey(DTKV+1, end)
 	}
-	return NewKIterator(this.Iterator(key_start, key_end))
+	return NewKIterator(db.Iterator(key_start, key_end))
 }
 
-func (this *DB) Rscan(start Bytes, end Bytes) (ret *KIterator) {
+func (db *DB) Rscan(start Bytes, end Bytes) (ret *KIterator) {
 	key_start, key_end := encodeKvKey(start), encodeKvKey(end)
 	if len(end) == 0 {
 		key_end = encodeOneKey(DTKV+1, end)
 	}
-	return NewKIterator(this.RevIterator(key_start, key_end))
+	return NewKIterator(db.RevIterator(key_start, key_end))
 }
