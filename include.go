@@ -40,21 +40,6 @@ var (
 	//ErrClosed           = errors.New("ssdb: closed")
 )
 
-/*
-static inline double millitime(){
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	double ret = now.tv_sec + now.tv_usec/1000.0/1000.0;
-	return ret;
-}
-
-static inline int64_t time_ms(){
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return now.tv_sec * 1000 + now.tv_usec/1000;
-}
-*/
-
 // [DT][KEY]
 func encodeOneKey(dt byte, key Bytes) (ret Bytes) {
 	if key == nil {

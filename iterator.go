@@ -33,45 +33,45 @@ func NewIterator(it iterator.Iterator, direction int) (that *Iterator) {
 	return &this
 }
 
-func (this *Iterator) Close() {
-	this.it.Release()
+func (it *Iterator) Close() {
+	it.it.Release()
 }
 
-func (this *Iterator) Key() (ret Bytes) {
-	return this.key
+func (it *Iterator) Key() (ret Bytes) {
+	return it.key
 }
 
-func (this *Iterator) Value() (ret Bytes) {
-	return this.value
+func (it *Iterator) Value() (ret Bytes) {
+	return it.value
 }
 
-func (this *Iterator) Skip(offset uint64) (ret bool) {
+func (it *Iterator) Skip(offset uint64) (ret bool) {
 	var b bool
 	for ; offset > 0; offset-- {
-		if b = this.Next(); !b {
+		if b = it.Next(); !b {
 			return false
 		}
 	}
 	return true
 }
 
-func (this *Iterator) next() (ret bool) {
-	it := this.it
-	if this.direction == FORWARD {
-		return it.Next()
+func (it *Iterator) next() (ret bool) {
+	rit := it.it
+	if it.direction == FORWARD {
+		return rit.Next()
 	} else {
-		return it.Prev()
+		return rit.Prev()
 	}
 }
 
-func (this *Iterator) Next() (ret bool) {
-	b := this.next()
+func (it *Iterator) Next() (ret bool) {
+	b := it.next()
 	if b {
-		this.key = NewByClone(this.it.Key())
-		this.value = NewByClone(this.it.Value())
+		it.key = NewByClone(it.it.Key())
+		it.value = NewByClone(it.it.Value())
 	} else {
-		this.key = nil
-		this.value = nil
+		it.key = nil
+		it.value = nil
 	}
 	return b
 }
@@ -81,19 +81,19 @@ type KIterator struct {
 }
 
 func NewKIterator(it *Iterator) (ret *KIterator) {
-	var this KIterator
-	this.Iterator = it
-	return &this
+	var kit KIterator
+	kit.Iterator = it
+	return &kit
 }
 
-func (this *KIterator) Next() (ret bool) {
-	b := this.next()
+func (kit *KIterator) Next() (ret bool) {
+	b := kit.next()
 	if b {
-		this.key = NewByClone(this.it.Key()[1:])
-		this.value = NewByClone(this.it.Value())
+		kit.key = NewByClone(kit.it.Key()[1:])
+		kit.value = NewByClone(kit.it.Value())
 	} else {
-		this.key = nil
-		this.value = nil
+		kit.key = nil
+		kit.value = nil
 	}
 	return b
 }
@@ -104,26 +104,26 @@ type EIterator struct {
 }
 
 func NewEIterator(it *Iterator) (ret *EIterator) {
-	var this EIterator
-	this.Iterator = it
-	return &this
+	var eit EIterator
+	eit.Iterator = it
+	return &eit
 }
 
-func (this *EIterator) Etime() (ret uint64) {
-	return this.etime
+func (eit *EIterator) Etime() (ret uint64) {
+	return eit.etime
 }
 
-func (this *EIterator) Next() (ret bool) {
-	b := this.next()
+func (eit *EIterator) Next() (ret bool) {
+	b := eit.next()
 	if b {
-		this.key = NewByClone(this.it.Key()[1:])
-		v, e := decodeExkvValue(this.it.Value())
-		this.value = NewByClone(v)
-		this.etime = e
+		eit.key = NewByClone(eit.it.Key()[1:])
+		v, e := decodeExkvValue(eit.it.Value())
+		eit.value = NewByClone(v)
+		eit.etime = e
 	} else {
-		this.key = nil
-		this.value = nil
-		this.etime = 0
+		eit.key = nil
+		eit.value = nil
+		eit.etime = 0
 	}
 	return b
 }
@@ -134,26 +134,26 @@ type XIterator struct {
 }
 
 func NewXIterator(it *Iterator) (ret *XIterator) {
-	var this XIterator
-	this.Iterator = it
-	return &this
+	var xit XIterator
+	xit.Iterator = it
+	return &xit
 }
 
-func (this *XIterator) Etime() (ret uint64) {
-	return this.etime
+func (xit *XIterator) Etime() (ret uint64) {
+	return xit.etime
 }
 
-func (this *XIterator) Next() (ret bool) {
-	b := this.next()
+func (xit *XIterator) Next() (ret bool) {
+	b := xit.next()
 	if b {
-		k, e := decodeExstampKey(this.it.Key())
-		this.key = NewByClone(k)
-		this.value = nil
-		this.etime = e
+		k, e := decodeExstampKey(xit.it.Key())
+		xit.key = NewByClone(k)
+		xit.value = nil
+		xit.etime = e
 	} else {
-		this.key = nil
-		this.value = nil
-		this.etime = 0
+		xit.key = nil
+		xit.value = nil
+		xit.etime = 0
 	}
 	return b
 }
@@ -163,21 +163,21 @@ type HIterator struct {
 }
 
 func NewHIterator(it *Iterator) (ret *HIterator) {
-	var this HIterator
-	this.Iterator = it
-	return &this
+	var hit HIterator
+	hit.Iterator = it
+	return &hit
 }
 
-func (this *HIterator) Next() (ret bool) {
-	nb := this.next()
+func (hit *HIterator) Next() (ret bool) {
+	nb := hit.next()
 	if nb {
-		rawkey := this.it.Key()
-		_, this.key = decodeHashKey(rawkey)
-		this.key = NewByClone(this.key)
-		this.value = NewByClone(this.it.Value())
+		rawkey := hit.it.Key()
+		_, hit.key = decodeHashKey(rawkey)
+		hit.key = NewByClone(hit.key)
+		hit.value = NewByClone(hit.it.Value())
 	} else {
-		this.key = nil
-		this.value = nil
+		hit.key = nil
+		hit.value = nil
 	}
 	return nb
 }
@@ -188,26 +188,26 @@ type QIterator struct {
 }
 
 func NewQIterator(it *Iterator) (ret *QIterator) {
-	var this QIterator
-	this.Iterator = it
-	return &this
+	var qit QIterator
+	qit.Iterator = it
+	return &qit
 }
 
-func (this *QIterator) Next() (ret bool) {
-	nb := this.next()
+func (qit *QIterator) Next() (ret bool) {
+	nb := qit.next()
 	if nb {
-		rawkey := this.it.Key()
-		_, this.key = decodeQitemKey(rawkey)
-		this.value = NewByClone(this.it.Value())
+		rawkey := qit.it.Key()
+		_, qit.key = decodeQitemKey(rawkey)
+		qit.value = NewByClone(qit.it.Value())
 	} else {
-		this.key = -1
-		this.value = nil
+		qit.key = -1
+		qit.value = nil
 	}
 	return nb
 }
 
-func (this *QIterator) Key() (ret int64) {
-	return this.key
+func (qit *QIterator) Key() (ret int64) {
+	return qit.key
 }
 
 ///***** ZSET *****/
@@ -217,39 +217,39 @@ type ZIterator struct {
 }
 
 func NewZIterator(it *Iterator) (ret *ZIterator) {
-	var this ZIterator
-	this.Iterator = it
-	this.score = -1
-	return &this
+	var zit ZIterator
+	zit.Iterator = it
+	zit.score = -1
+	return &zit
 }
 
-func (this *ZIterator) Next() (ret bool) {
-	nb := this.next()
+func (zit *ZIterator) Next() (ret bool) {
+	nb := zit.next()
 	if nb {
-		rawkey := this.it.Key()
+		rawkey := zit.it.Key()
 		key, value, score := decodeZscoreKey(rawkey)
-		this.key = NewByClone(key)
-		this.value = NewByClone(value)
-		this.score = score
+		zit.key = NewByClone(key)
+		zit.value = NewByClone(value)
+		zit.score = score
 	} else {
-		this.key = nil
-		this.value = nil
-		this.score = -1
+		zit.key = nil
+		zit.value = nil
+		zit.score = -1
 	}
 	return nb
 }
 
-func (this *ZIterator) Score() (ret int64) {
-	return this.score
+func (zit *ZIterator) Score() (ret int64) {
+	return zit.score
 }
 
-func (this *ZIterator) Name() (ret Bytes) {
-	return this.key
+func (zit *ZIterator) Name() (ret Bytes) {
+	return zit.key
 }
 
-func (this *ZIterator) Key() (ret Bytes) {
-	return this.value
+func (zit *ZIterator) Key() (ret Bytes) {
+	return zit.value
 }
 
-func (this *ZIterator) Value() {
+func (zit *ZIterator) Value() {
 }

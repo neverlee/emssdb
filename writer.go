@@ -12,38 +12,38 @@ type Writer struct {
 }
 
 func NewWriter(db *leveldb.DB) *Writer {
-	var this Writer
-	this.db = db
-	return &this
+	var w Writer
+	w.db = db
+	return &w
 }
 
-func (this *Writer) Begin() {
-	this.batch.Reset()
+func (w *Writer) Begin() {
+	w.batch.Reset()
 }
 
-func (this *Writer) RollBack() {
-	this.batch.Reset()
+func (w *Writer) RollBack() {
+	w.batch.Reset()
 }
 
-func (this *Writer) Commit() (err error) {
+func (w *Writer) Commit() (err error) {
 	//var writeOpts opt.WriteOptions
-	return this.db.Write(&this.batch, nil)
+	return w.db.Write(&w.batch, nil)
 }
 
-func (this *Writer) Put(key []byte, val []byte) {
-	this.batch.Put(key, val)
+func (w *Writer) Put(key []byte, val []byte) {
+	w.batch.Put(key, val)
 }
 
-func (this *Writer) Delete(key []byte) {
-	this.batch.Delete(key)
+func (w *Writer) Delete(key []byte) {
+	w.batch.Delete(key)
 }
 
-func (this *Writer) Do() {
-	this.Mutex.Lock()
-	this.Begin()
+func (w *Writer) Do() {
+	w.Mutex.Lock()
+	w.Begin()
 }
 
-func (this *Writer) Done() {
-	this.RollBack()
-	this.Mutex.Unlock()
+func (w *Writer) Done() {
+	w.RollBack()
+	w.Mutex.Unlock()
 }

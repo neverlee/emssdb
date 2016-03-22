@@ -40,41 +40,41 @@ func OpenDB(options Options) (that *DB, err error) {
 
 	//log::path,cache_size,block_size,write_buffer,compression
 
-	this := newDB()
-	this.options.ErrorIfMissing = false
-	this.options.Filter = filter.NewBloomFilter(10)
-	//this.Options.BlockCacher = leveldb::NewLRUCache(cache_size * 1048576)
-	this.options.BlockSize = block_size * 1024
-	this.options.WriteBuffer = write_buffer_size * 1024 * 1024
-	this.expireDelay = options.ExpireDelay
+	d := newDB()
+	d.options.ErrorIfMissing = false
+	d.options.Filter = filter.NewBloomFilter(10)
+	//d.Options.BlockCacher = leveldb::NewLRUCache(cache_size * 1048576)
+	d.options.BlockSize = block_size * 1024
+	d.options.WriteBuffer = write_buffer_size * 1024 * 1024
+	d.expireDelay = options.ExpireDelay
 	if compression {
-		this.options.Compression = opt.SnappyCompression
+		d.options.Compression = opt.SnappyCompression
 	} else {
-		this.options.Compression = opt.NoCompression
+		d.options.Compression = opt.NoCompression
 	}
 
-	if tdb, err := leveldb.OpenFile(main_db_path, &this.options); err == nil {
-		//runtime.SetFinalizer(this,
-		//	func(this *DB) {
-		//		this.db.Close()
+	if tdb, err := leveldb.OpenFile(main_db_path, &d.options); err == nil {
+		//runtime.SetFinalizer(d,
+		//	func(d *DB) {
+		//		d.db.Close()
 		//	})
-		this.db = tdb
-		this.writer = NewWriter(this.db)
-		go this.expireDaemon()
-		return this, nil
+		d.db = tdb
+		d.writer = NewWriter(d.db)
+		go d.expireDaemon()
+		return d, nil
 	} else {
 		return nil, err
 	}
 }
 
-func (this *DB) Close() {
-	this.end = true
-	this.waitgroup.Wait()
-	this.db.Close()
+func (d *DB) Close() {
+	d.end = true
+	d.waitgroup.Wait()
+	d.db.Close()
 }
 
 //	// return (start, end], not include start
-func (this *DB) Iterator(start Bytes, end Bytes) (ret *Iterator) {
+func (d *DB) Iterator(start Bytes, end Bytes) (ret *Iterator) {
 	if len(start) == 0 {
 		start = nil
 	}
@@ -83,11 +83,11 @@ func (this *DB) Iterator(start Bytes, end Bytes) (ret *Iterator) {
 	}
 	var iopt opt.ReadOptions
 	iopt.DontFillCache = true
-	it := this.db.NewIterator(&util.Range{Start: start, Limit: end}, &iopt)
+	it := d.db.NewIterator(&util.Range{Start: start, Limit: end}, &iopt)
 	return NewIterator(it, FORWARD)
 }
 
-func (this *DB) RevIterator(start Bytes, end Bytes) (ret *Iterator) {
+func (d *DB) RevIterator(start Bytes, end Bytes) (ret *Iterator) {
 	if len(start) == 0 {
 		start = nil
 	}
@@ -96,13 +96,13 @@ func (this *DB) RevIterator(start Bytes, end Bytes) (ret *Iterator) {
 	}
 	var iopt opt.ReadOptions
 	iopt.DontFillCache = true
-	it := this.db.NewIterator(&util.Range{Start: start, Limit: end}, &iopt)
+	it := d.db.NewIterator(&util.Range{Start: start, Limit: end}, &iopt)
 	it.Last()
 	it.Next()
 	return NewIterator(it, BACKWARD)
 }
 
-func (this *DB) Info() (ret map[string]string) {
+func (d *DB) Info() (ret map[string]string) {
 	//  "leveldb.num-files-at-level<N>" - return the number of files at level <N>,
 	//     where <N> is an ASCII representation of a level number (e.g. "0").
 	//  "leveldb.stats" - returns a multi-line string that describes statistics
@@ -121,7 +121,7 @@ func (this *DB) Info() (ret map[string]string) {
 	//keys = append(keys, "leveldb.sstables")
 
 	for _, key := range keys {
-		if val, err := this.db.GetProperty(key); err == nil {
+		if val, err := d.db.GetProperty(key); err == nil {
 			info[key] = val
 		}
 	}
@@ -129,11 +129,11 @@ func (this *DB) Info() (ret map[string]string) {
 	return info
 }
 
-func (this *DB) Compact() (err error) {
-	return this.db.CompactRange(util.Range{})
+func (d *DB) Compact() (err error) {
+	return d.db.CompactRange(util.Range{})
 }
 
-func (this *DB) KeyRange(keys []string) {
+func (d *DB) KeyRange(keys []string) {
 	//	int ret = 0;
 	//	std::string kstart, kend;
 	//	std::string hstart, hend;
@@ -141,7 +141,7 @@ func (this *DB) KeyRange(keys []string) {
 	//
 	//	Iterator *it;
 	//
-	//	it = this->iterator(encode_kv_key(""), "", 1);
+	//	it = d->iterator(encode_kv_key(""), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::KV){
@@ -155,7 +155,7 @@ func (this *DB) KeyRange(keys []string) {
 	//	}
 	//	delete it;
 	//
-	//	it = this->rev_iterator(encode_kv_key("\xff"), "", 1);
+	//	it = d->rev_iterator(encode_kv_key("\xff"), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::KV){
@@ -169,7 +169,7 @@ func (this *DB) KeyRange(keys []string) {
 	//	}
 	//	delete it;
 	//
-	//	it = this->iterator(encode_hsize_key(""), "", 1);
+	//	it = d->iterator(encode_hsize_key(""), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::HSIZE){
@@ -183,7 +183,7 @@ func (this *DB) KeyRange(keys []string) {
 	//	}
 	//	delete it;
 	//
-	//	it = this->rev_iterator(encode_hsize_key("\xff"), "", 1);
+	//	it = d->rev_iterator(encode_hsize_key("\xff"), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::HSIZE){
@@ -197,7 +197,7 @@ func (this *DB) KeyRange(keys []string) {
 	//	}
 	//	delete it;
 	//
-	//	it = this->iterator(encode_zsize_key(""), "", 1);
+	//	it = d->iterator(encode_zsize_key(""), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::ZSIZE){
@@ -211,7 +211,7 @@ func (this *DB) KeyRange(keys []string) {
 	//	}
 	//	delete it;
 	//
-	//	it = this->rev_iterator(encode_zsize_key("\xff"), "", 1);
+	//	it = d->rev_iterator(encode_zsize_key("\xff"), "", 1);
 	//	if(it->next()){
 	//		Bytes ks = it->key();
 	//		if(ks.data()[0] == DataType::ZSIZE){
@@ -238,16 +238,16 @@ func (this *DB) KeyRange(keys []string) {
 //
 //	/* raw operates */
 //
-//	// repl: whether to sync this operation to slaves
-func (this *DB) RawSet(key Bytes, val Bytes) (err error) {
+//	// repl: whether to sync d operation to slaves
+func (d *DB) RawSet(key Bytes, val Bytes) (err error) {
 	//var writeOpts opt.WriteOptions
-	return this.db.Put(key, val, nil)
+	return d.db.Put(key, val, nil)
 }
-func (this *DB) RawDel(key Bytes) (err error) {
+func (d *DB) RawDel(key Bytes) (err error) {
 	//var writeOpts opt.WriteOptions
-	return this.db.Delete(key, nil)
+	return d.db.Delete(key, nil)
 }
-func (this *DB) RawGet(key Bytes) (val Bytes, err error) {
+func (d *DB) RawGet(key Bytes) (val Bytes, err error) {
 	//var writeOpts opt.WriteOptions
-	return this.db.Get(key, nil)
+	return d.db.Get(key, nil)
 }
