@@ -44,6 +44,7 @@ func OpenDB(options Options) (that *DB, err error) {
 	d.options.ErrorIfMissing = false
 	d.options.Filter = filter.NewBloomFilter(10)
 	//d.Options.BlockCacher = leveldb::NewLRUCache(cache_size * 1048576)
+	d.options.BlockCacheCapacity = cache_size * 1024 * 1024
 	d.options.BlockSize = block_size * 1024
 	d.options.WriteBuffer = write_buffer_size * 1024 * 1024
 	d.expireDelay = options.ExpireDelay
