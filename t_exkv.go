@@ -107,13 +107,15 @@ func (db *DB) Elist(start uint64, end uint64) (ret *XIterator) {
 func (db *DB) expireDaemon() {
 	db.waitgroup.Add(1)
 
-	for !db.end {
-		now := time.Now().Unix()
-		xit := db.Elist(0, uint64(now))
-		for xit.Next() {
-			db.Edel(xit.Key())
+	if db.expireDelay >= time.Second {
+		for !db.end {
+			now := time.Now().Unix()
+			xit := db.Elist(0, uint64(now))
+			for xit.Next() {
+				db.Edel(xit.Key())
+			}
+			time.Sleep(db.expireDelay)
 		}
-		time.Sleep(db.expireDelay)
 	}
 	db.waitgroup.Done()
 }
