@@ -84,17 +84,17 @@ func (db *DB) Get(key Bytes) (ret Bytes, err error) {
 }
 
 func (db *DB) Scan(start Bytes, end Bytes) (ret *KIterator) {
-	key_start, key_end := encodeKvKey(start), encodeKvKey(end)
+	keyStart, keyEnd := encodeKvKey(start), encodeKvKey(end)
 	if len(end) == 0 {
-		key_end = encodeOneKey(DTKV+1, end)
+		keyEnd = encodeOneKey(DTKV+1, end)
 	}
-	return NewKIterator(db.Iterator(key_start, key_end))
+	return NewKIterator(db.Iterator(keyStart, keyEnd))
 }
 
 func (db *DB) Rscan(start Bytes, end Bytes) (ret *KIterator) {
-	key_start, key_end := encodeKvKey(start), encodeKvKey(end)
+	keyStart, keyEnd := encodeKvKey(start), encodeKvKey(end)
 	if len(end) == 0 {
-		key_end = encodeOneKey(DTKV+1, end)
+		keyEnd = encodeOneKey(DTKV+1, end)
 	}
-	return NewKIterator(db.RevIterator(key_start, key_end))
+	return NewKIterator(db.RevIterator(keyStart, keyEnd))
 }

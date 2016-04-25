@@ -25,28 +25,28 @@ func newDB() *DB {
 }
 
 func OpenDB(options Options) (that *DB, err error) {
-	main_db_path := options.Path
-	cache_size := options.CacheSize
-	write_buffer_size := 4
-	block_size := 4
+	mainDBPath := options.Path
+	cacheSize := options.CacheSize
+	writeBufferSize := 4
+	blockSize := 4
 	compression := options.Compression
 	if options.ExpireDelay <= time.Second {
 		options.ExpireDelay = time.Second
 	}
 
-	if cache_size <= 0 {
-		cache_size = 8
+	if cacheSize <= 0 {
+		cacheSize = 8
 	}
 
-	//log::path,cache_size,block_size,write_buffer,compression
+	//log::path,cacheSize,blockSize,write_buffer,compression
 
 	d := newDB()
 	d.options.ErrorIfMissing = false
 	d.options.Filter = filter.NewBloomFilter(10)
-	//d.Options.BlockCacher = leveldb::NewLRUCache(cache_size * 1048576)
-	d.options.BlockCacheCapacity = cache_size * 1024 * 1024
-	d.options.BlockSize = block_size * 1024
-	d.options.WriteBuffer = write_buffer_size * 1024 * 1024
+	//d.Options.BlockCacher = leveldb::NewLRUCache(cacheSize * 1048576)
+	d.options.BlockCacheCapacity = cacheSize * 1024 * 1024
+	d.options.BlockSize = blockSize * 1024
+	d.options.WriteBuffer = writeBufferSize * 1024 * 1024
 	d.expireDelay = options.ExpireDelay
 	if compression {
 		d.options.Compression = opt.SnappyCompression
@@ -54,7 +54,7 @@ func OpenDB(options Options) (that *DB, err error) {
 		d.options.Compression = opt.NoCompression
 	}
 
-	if tdb, err := leveldb.OpenFile(main_db_path, &d.options); err == nil {
+	if tdb, err := leveldb.OpenFile(mainDBPath, &d.options); err == nil {
 		//runtime.SetFinalizer(d,
 		//	func(d *DB) {
 		//		d.db.Close()

@@ -81,27 +81,27 @@ func (db *DB) Eget(key Bytes) (ret Bytes, stamp uint64, err error) {
 }
 
 func (db *DB) Escan(start Bytes, end Bytes) (ret *EIterator) {
-	key_start, key_end := encodeExkvKey(start), encodeExkvKey(end)
+	keyStart, keyEnd := encodeExkvKey(start), encodeExkvKey(end)
 	if len(end) == 0 {
-		key_end = encodeOneKey(DTEXKV+1, end)
+		keyEnd = encodeOneKey(DTEXKV+1, end)
 	}
-	return NewEIterator(db.Iterator(key_start, key_end))
+	return NewEIterator(db.Iterator(keyStart, keyEnd))
 }
 
 func (db *DB) Erscan(start Bytes, end Bytes) (ret *EIterator) {
-	key_start, key_end := encodeExkvKey(start), encodeExkvKey(end)
+	keyStart, keyEnd := encodeExkvKey(start), encodeExkvKey(end)
 	if len(end) == 0 {
-		key_end = encodeOneKey(DTEXKV+1, end)
+		keyEnd = encodeOneKey(DTEXKV+1, end)
 	}
-	return NewEIterator(db.RevIterator(key_start, key_end))
+	return NewEIterator(db.RevIterator(keyStart, keyEnd))
 }
 
 func (db *DB) Elist(start uint64, end uint64) (ret *XIterator) {
 	if end < start {
 		end = start + 1
 	}
-	key_start, key_end := encodeExstampKey(nil, start), encodeExstampKey(nil, end)
-	return NewXIterator(db.Iterator(key_start, key_end))
+	keyStart, keyEnd := encodeExstampKey(nil, start), encodeExstampKey(nil, end)
+	return NewXIterator(db.Iterator(keyStart, keyEnd))
 }
 
 func (db *DB) expireDaemon() {

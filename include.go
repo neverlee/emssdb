@@ -54,9 +54,8 @@ func encodeOneKey(dt byte, key Bytes) (ret Bytes) {
 func decodeOneKey(slice Bytes) (key Bytes) {
 	if len(slice) > 1 {
 		return slice[1:]
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // [DT][len(NAME)][NAME][0][KEY]

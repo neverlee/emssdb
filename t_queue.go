@@ -181,7 +181,7 @@ func (db *DB) _qpop(name Bytes, fbseq int64) (item Bytes, ret error) {
 	}
 
 	db.qdelOne(name, seq)
-	isize -= 1
+	isize--
 	if isize <= 0 {
 		db.qdelOne(name, qFRONT_SEQ)
 		db.qdelOne(name, qBACK_SEQ)
@@ -212,7 +212,7 @@ func (db *DB) Qlist(sname, ename Bytes) (ret []Bytes) {
 		end = encodeOneKey(DTQSIZE+1, nil)
 	}
 	it := db.Iterator(start, end)
-	list := make([]Bytes, 0)
+	var list = make([]Bytes, 0)
 	for it.Next() {
 		ks := it.Key()
 		ks = ks[1:]
@@ -231,6 +231,6 @@ func encodeQitemiteraKey(name Bytes, fill byte) (ret Bytes) {
 
 func (db *DB) Qscan(name Bytes) (ret *QIterator) {
 	//key_start, key_end := encodeQitemiteraKey(name, 0), encodeQitemiteraKey(name, 1)
-	key_start, key_end := encodeQitemKey(name, 0), encodeQitemKey(name, 0x7FFFFFFFffffffff)
-	return NewQIterator(db.Iterator(key_start, key_end))
+	keyStart, keyEnd := encodeQitemKey(name, 0), encodeQitemKey(name, 0x7FFFFFFFffffffff)
+	return NewQIterator(db.Iterator(keyStart, keyEnd))
 }

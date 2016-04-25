@@ -98,19 +98,19 @@ func (db *DB) Hsize(name Bytes) (ret int64, err error) {
 }
 
 func (db *DB) Hscan(name, start, end Bytes) (ret *HIterator) {
-	key_start, key_end := encodeHashKey(name, start), encodeHashKey(name, end)
+	keyStart, keyEnd := encodeHashKey(name, start), encodeHashKey(name, end)
 	if len(end) == 0 {
-		key_end = encodeTwoKey(DTHASH, name, 1, nil)
+		keyEnd = encodeTwoKey(DTHASH, name, 1, nil)
 	}
-	return NewHIterator(db.Iterator(key_start, key_end))
+	return NewHIterator(db.Iterator(keyStart, keyEnd))
 }
 
 func (db *DB) Hrscan(name, start, end Bytes) (ret *HIterator) {
-	key_start, key_end := encodeHashKey(name, start), encodeHashKey(name, end)
+	keyStart, keyEnd := encodeHashKey(name, start), encodeHashKey(name, end)
 	if len(end) == 0 {
-		key_end = encodeTwoKey(DTHASH, name, 1, nil)
+		keyEnd = encodeTwoKey(DTHASH, name, 1, nil)
 	}
-	return NewHIterator(db.RevIterator(key_start, key_end))
+	return NewHIterator(db.RevIterator(keyStart, keyEnd))
 }
 
 func (db *DB) Hlist(sname, ename Bytes) (ret []Bytes) {
