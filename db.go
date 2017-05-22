@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// DB emssdb DB struct
 type DB struct {
 	db          *leveldb.DB
 	options     opt.Options
@@ -19,11 +20,7 @@ type DB struct {
 	waitgroup   sync.WaitGroup
 }
 
-func newDB() *DB {
-	var db DB
-	return &db
-}
-
+// OpenDB open a emssdb by options
 func OpenDB(options Options) (that *DB, err error) {
 	mainDBPath := options.Path
 	cacheSize := options.CacheSize
@@ -40,7 +37,7 @@ func OpenDB(options Options) (that *DB, err error) {
 
 	//log::path,cacheSize,blockSize,write_buffer,compression
 
-	d := newDB()
+	var d DB
 	d.options.ErrorIfMissing = false
 	d.options.Filter = filter.NewBloomFilter(10)
 	//d.Options.BlockCacher = leveldb::NewLRUCache(cacheSize * 1048576)
@@ -62,19 +59,20 @@ func OpenDB(options Options) (that *DB, err error) {
 		d.db = tdb
 		d.writer = NewWriter(d.db)
 		go d.expireDaemon()
-		return d, nil
+		return &d, nil
 	} else {
 		return nil, err
 	}
 }
 
+// Close close emssdb
 func (d *DB) Close() {
 	d.end = true
 	d.waitgroup.Wait()
 	d.db.Close()
 }
 
-//	// return (start, end], not include start
+// return (start, end], not include start
 func (d *DB) Iterator(start Bytes, end Bytes) (ret *Iterator) {
 	if len(start) == 0 {
 		start = nil
