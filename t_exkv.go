@@ -40,6 +40,8 @@ func (db *DB) Eset(key, val Bytes, etime uint64) (err error) {
 	if len(key) == 0 {
 		return ErrEmptyKey
 	}
+	db.Edel(key)
+
 	writer := db.writer
 	writer.Do()
 	defer writer.Done()
@@ -112,7 +114,20 @@ func (db *DB) expireDaemon() {
 			now := time.Now().Unix()
 			xit := db.Elist(0, uint64(now))
 			for xit.Next() {
-				db.Edel(xit.Key())
+				// db.Edel(xit.Key())
+				writer := db.writer
+				writer.Do()
+				// readoption
+				key := xit.Key()
+				_, etime, _ := db.Eget(key)
+				if etime == xit.Etime() {
+					ekey := encodeExkvKey(key)
+					writer.Delete(ekey)
+				}
+				xkey := encodeExstampKey(key, etime)
+				writer.Delete(xkey)
+				writer.Commit()
+				writer.Done()
 			}
 			time.Sleep(db.expireDelay)
 		}
