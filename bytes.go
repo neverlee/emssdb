@@ -5,7 +5,7 @@ import (
 )
 
 type Bytes []byte
-type B []byte
+type B = Bytes
 
 // NewByClone deep copy a new byte slice
 func NewByClone(bb []byte) (ret Bytes) {
